@@ -176,7 +176,7 @@
         <div class="col-md-10"></div>
         <div class="col-md-2 justify-content-end">
             <button class="btn btn-primary" id="emp_add_modal_btn">新增</button>
-            <button class="btn btn-danger" id="emp_delete_batch_btn">删除</button>
+            <button class="btn btn-danger" id="emp_delete_all_btn">删除</button>
         </div>
     </div>
     <div class="row">
@@ -184,6 +184,7 @@
             <table class="table table table-striped table-hover" id="emps_table">
                 <thead>
                 <tr>
+                    <th><input type="checkbox" id="check_all"/></th>
                     <th>#</th>
                     <th>empName</th>
                     <th>gender</th>
@@ -215,6 +216,9 @@
     });
 
     function to_page(pn){
+
+        $("#check_all").prop("checked", false);
+
         $.ajax({
             url:"${APP_PATH}/emps",
             data:"pn="+pn,
@@ -239,6 +243,7 @@
         var emps = result.extend.pageInfo.list;
 
         $.each(emps, function (index, item) {
+            var checkboxTd = $("<td><input type='checkbox' class='check_item'></td>")
             var empIdTd = $("<td></td>").append(item.empId);
             var empNameTd = $("<td></td>").append(item.empName);
             var genderTd = $("<td></td>").append(item.gender=="M"?"男":"女");
@@ -259,7 +264,7 @@
 
             var btnTd = $("<td></td>").append(editBtn).append(" ").append(delBtn);
             // append方法执行完成会返回原来的元素，所以可以链式使用
-            $("<tr></tr>").append(empIdTd).append(empNameTd).
+            $("<tr></tr>").append(checkboxTd).append(empIdTd).append(empNameTd).
             append(genderTd).append(emailTd).append(deptNameTd)
                 .append(btnTd).appendTo("#emps_table tbody");
         });
@@ -471,7 +476,7 @@
     // 单个删除，给删除按钮绑事件
     $(document).on("click",".del_btn",function(){
         // 1.是否删除的确认对话框
-        var empName = $(this).parents("tr").children().eq(1).text();
+        var empName = $(this).parents("tr").children().eq(2).text();
         var empId = $(this).attr("edit-id");
 
         if(confirm("确认删除【"+empName+"】吗？")){
@@ -542,7 +547,47 @@
 
             }
         });
+    });
 
+    // 完成全选，全不选的功能
+    $("#check_all").click(function (){
+        // 使用prop获取dom中原生属性的值，attr获取自定义属性的值
+        // $(this).prop("checked");
+        $(".check_item").prop("checked", $(this).prop("checked"));
+    });
+
+    // check_item绑定事件
+    $(document).on("click",".check_item",function(){
+        // 判断当前选择中的五个是不是全被选了
+        var flag = $(".check_item:checked").length==$(".check_item").length;
+        $("#check_all").prop("checked",flag);
+    });
+
+    //点击全部删除，则执行批量删除
+    $("#emp_delete_all_btn").click(function(){
+       //$(".check_item:checked")
+        var empNames = "";
+        var del_idstr = ""
+       $.each($(".check_item:checked"),function(){
+          empNames += $(this).parents("tr").children().eq(2).text()+",";
+          del_idstr += $(this).parents("tr").children().eq(1).text()+'-';
+       });
+        del_idstr = del_idstr.substring(0,del_idstr.length-1);
+        if(empNames.length==0){
+            alert("请至少选择一个人进行删除");
+            return false;
+        }
+       if(confirm("确认删除【"+empNames.substring(0,empNames.length-1)+"】嘛")){
+           // 发送ajax完成删除请求
+           $.ajax({
+               url:"${APP_PATH}/emp/" + del_idstr,
+               type:"DELETE",
+               success:function(result){
+                   alert(result.msg);
+                   to_page(currentPage);
+               }
+           });
+       }
     });
 
 </script>
